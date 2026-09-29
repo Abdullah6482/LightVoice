@@ -2,6 +2,7 @@
 
 # dependencies
 node_modules/
+src/services/pdf/runtime.generated.ts
 
 # Expo
 .expo/
@@ -60,6 +61,9 @@ ehthumbs_vista.db
 .env.*
 .env*.local
 !.env.example
+
+# AI agent instructions
+AGENTS.md
 
 # typescript
 *.tsbuildinfo

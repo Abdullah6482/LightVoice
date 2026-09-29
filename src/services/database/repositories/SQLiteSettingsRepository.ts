@@ -26,6 +26,9 @@ export class SQLiteSettingsRepository implements SettingsRepository {
       return {
         playbackRate: playbackRates.includes(saved?.playbackRate) ? saved.playbackRate : 1,
         continueToNextChapter: typeof saved?.continueToNextChapter === 'boolean' ? saved.continueToNextChapter : true,
+        voiceId: typeof saved?.voiceId === 'string' ? saved.voiceId : undefined,
+        readerFontSize: [16, 18, 20, 22, 24, 28].includes(saved?.readerFontSize) ? saved.readerFontSize : 20,
+        librarySort: ['newest', 'title', 'author'].includes(saved?.librarySort) ? saved.librarySort : 'newest',
       };
     } catch {
       return defaultSettings;

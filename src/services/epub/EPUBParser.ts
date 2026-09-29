@@ -1,6 +1,8 @@
 import JSZip from 'jszip';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { cleanChapter } from './TextCleaner';
+import { navigationLinks } from './Contents';
+import type { PDFReport } from '../pdf/PDFReport';
 
 export interface ParsedBook {
   title: string;
@@ -8,6 +10,7 @@ export interface ParsedBook {
   cover?: { bytes: Uint8Array; extension: string };
   chapters: { title: string; text: string; wordCount: number }[];
   warnings: string[];
+  pdfReport?: PDFReport;
 }
 
 const xml = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true, parseTagValue: false, processEntities: false });
@@ -90,6 +93,33 @@ export async function parseEPUB(bytes: Uint8Array, fallbackTitle: string): Promi
     if (zip.file(path)) result.cover = { bytes: await readBytes(path), extension: extensions[cover['@_media-type']] };
   }
   if (!result.cover) result.warnings.push('No supported cover image found.');
+  const titles = new Map<string, string>();
+  const addTitle = (base: string, href: string, title: string) => {
+    const path = resolveEntry(base, href);
+    if (title && !titles.has(path)) titles.set(path, title);
+  };
+  // EPUB 3 navigation and EPUB 2 NCX carry the publisher's chapter numbers.
+  const nav = items.find((item) => (item['@_properties'] ?? '').split(/\s+/).includes('nav'));
+  const ncx = manifest.get(pkg.spine['@_toc']) ?? items.find((item) => item['@_media-type'] === 'application/x-dtbncx+xml');
+  try {
+    if (nav) {
+      const path = resolveEntry(opfPath, nav['@_href']);
+      if (zip.file(path)) for (const entry of navigationLinks(await readText(path))) addTitle(path, entry.href, entry.title);
+    }
+    if (ncx) {
+      const path = resolveEntry(opfPath, ncx['@_href']);
+      if (zip.file(path)) {
+        type Point = { navLabel?: { text?: unknown }; content?: { '@_src'?: string }; navPoint?: Point | Point[] };
+        const visit = (points: Point | Point[] | undefined) => {
+          for (const point of list(points)) {
+            if (point.content?.['@_src']) addTitle(path, point.content['@_src'], label(point.navLabel?.text));
+            visit(point.navPoint);
+          }
+        };
+        visit((await readXML(path)).ncx?.navMap?.navPoint);
+      }
+    }
+  } catch { result.warnings.push('The contents labels could not be read; using chapter headings.'); }
   const seen = new Set<string>();
   for (const ref of list<Record<string, string>>(pkg.spine.itemref)) {
     if (ref['@_linear'] === 'no') continue;
@@ -102,7 +132,7 @@ export async function parseEPUB(bytes: Uint8Array, fallbackTitle: string): Promi
     seen.add(path);
     const cleaned = cleanChapter(await readText(path));
     if (!cleaned.text) continue;
-    result.chapters.push({ title: cleaned.title || `Chapter ${result.chapters.length + 1}`, text: cleaned.text, wordCount: cleaned.text.split(/\s+/).length });
+    result.chapters.push({ title: titles.get(path) || cleaned.title || `Section ${result.chapters.length + 1}`, text: cleaned.text, wordCount: cleaned.text.split(/\s+/).length });
   }
   if (!result.chapters.length) throw new Error('No readable chapters were found. The book may be image-only or encrypted.');
   return result;

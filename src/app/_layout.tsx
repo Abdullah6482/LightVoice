@@ -7,6 +7,7 @@ import { colors } from '@/constants/theme';
 import { getDatabase } from '@/services/database/database';
 import { ExpoFileStorage } from '@/services/storage/ExpoFileStorage';
 import { PlaybackLifecycle } from '@/components/PlaybackLifecycle';
+import { PDFExtractionHost } from '@/components/PDFExtractionHost';
 
 export default function RootLayout() {
   const [error, setError] = useState<string>();
@@ -42,6 +43,7 @@ export default function RootLayout() {
     <>
       <StatusBar style="light" />
       <PlaybackLifecycle />
+      <PDFExtractionHost />
       <Stack screenOptions={{ headerShown: false }} />
     </>
   );

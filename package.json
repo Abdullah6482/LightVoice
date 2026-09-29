@@ -8,6 +8,7 @@
     "expo": "~57.0.24",
     "expo-constants": "~57.0.19",
     "expo-crypto": "~57.0.3",
+    "expo-dev-client": "~57.0.19",
     "expo-document-picker": "~57.0.2",
     "expo-file-system": "~57.0.7",
     "expo-linking": "~57.0.10",
@@ -37,6 +38,9 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "generate:pdf": "node scripts/build-pdf.cjs",
+    "postinstall": "npm run generate:pdf",
+    "prestart": "npm run generate:pdf",
     "test": "node --test tests/*.test.cjs",
     "start": "expo start",
     "android": "expo start --android",

@@ -7,7 +7,7 @@ export function PlaybackLifecycle() {
     void player.initialize();
     void player.setForeground(AppState.currentState === 'active');
     const subscription = AppState.addEventListener('change', (state) => { void player.setForeground(state === 'active'); });
-    return () => { subscription.remove(); void player.pause(); };
+    return () => { subscription.remove(); if (!player.supportsBackground) void player.pause(); };
   }, []);
   return null;
 }

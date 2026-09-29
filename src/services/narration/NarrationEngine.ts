@@ -8,6 +8,6 @@ export interface NarrationCallbacks {
 // Engines speak bounded passages. The player owns queueing, pause/resume and progress.
 export interface NarrationEngine {
   readonly maxTextLength: number;
-  speak(text: string, rate: number, callbacks: NarrationCallbacks): void;
+  speak(text: string, rate: number, callbacks: NarrationCallbacks, voiceId?: string): void;
   stop(): Promise<void>;
 }

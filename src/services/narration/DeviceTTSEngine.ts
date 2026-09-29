@@ -3,9 +3,9 @@ import type { NarrationCallbacks, NarrationEngine } from './NarrationEngine';
 
 export class DeviceTTSEngine implements NarrationEngine {
   get maxTextLength() { return Math.min(240, Speech.maxSpeechInputLength); }
-  speak(text: string, rate: number, callbacks: NarrationCallbacks) {
+  speak(text: string, rate: number, callbacks: NarrationCallbacks, voiceId?: string) {
     Speech.speak(text, {
-      language: 'en', rate,
+      language: 'en', rate, voice: voiceId || undefined,
       onBoundary: (event: { charIndex: number }) => callbacks.onBoundary(event.charIndex),
       onDone: callbacks.onDone,
       onStopped: callbacks.onStopped,

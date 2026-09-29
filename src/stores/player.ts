@@ -5,6 +5,12 @@ import { SQLiteSettingsRepository } from '../services/database/repositories/SQLi
 import { ExpoFileStorage } from '../services/storage/ExpoFileStorage';
 import { DeviceTTSEngine } from '../services/narration/DeviceTTSEngine';
 import { PlayerController } from '../services/narration/PlayerController';
+import { Platform } from 'react-native';
+import { requireOptionalNativeModule } from 'expo';
+import { NativePlaybackController, type NativePlayback } from '../services/narration/NativePlaybackController';
 
-export const player = new PlayerController(new DeviceTTSEngine(), new SQLiteLibraryRepository(), new SQLitePlaybackRepository(), new SQLiteSettingsRepository(), (path) => new ExpoFileStorage().readText(path));
+const native = Platform.OS === 'android' ? requireOptionalNativeModule<NativePlayback>('LightVoicePlayback') : null;
+export const player = native
+  ? new NativePlaybackController(native, new SQLiteLibraryRepository(), new SQLitePlaybackRepository(), new SQLiteSettingsRepository())
+  : new PlayerController(new DeviceTTSEngine(), new SQLiteLibraryRepository(), new SQLitePlaybackRepository(), new SQLiteSettingsRepository(), (path) => new ExpoFileStorage().readText(path));
 export const usePlayer = () => useSyncExternalStore(player.subscribe, player.getSnapshot, player.getSnapshot);

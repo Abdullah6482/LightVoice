@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { SQLiteLibraryRepository } from '../database/repositories/SQLiteLibraryRepository';
 import { ExpoFileStorage } from '../storage/ExpoFileStorage';
 import { importBook } from './ImportBook';
+import { parsePDF } from '../pdf/PDFService';
 
 let importing = false;
 export async function pickAndImport(progress: (message: string) => void) {
@@ -21,13 +22,14 @@ export async function pickAndImport(progress: (message: string) => void) {
     if (result.canceled) return null;
     const asset = result.assets[0];
     cached = new File(asset.uri);
-    if (!asset.name.toLowerCase().endsWith('.epub')) throw new Error('Please choose an .epub file.');
-    if (cached.size > 50 * 1024 * 1024) throw new Error('Please choose an EPUB smaller than 50 MB.');
+    if (!/\.(epub|pdf)$/i.test(asset.name)) throw new Error('Please choose an EPUB or PDF file.');
+    const limit = /\.pdf$/i.test(asset.name) ? 20 : 50;
+    if (cached.size > limit * 1024 * 1024) throw new Error(`Please choose a file smaller than ${limit} MB.`);
     progress('Opening book…');
     const bytes = await cached.bytes();
     const hash = new Uint8Array(await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, bytes));
     const id = Array.from(hash, (byte) => byte.toString(16).padStart(2, '0')).join('');
-    return await importBook(bytes, asset.name, id, new SQLiteLibraryRepository(), new ExpoFileStorage(), progress);
+    return await importBook(bytes, asset.name, id, new SQLiteLibraryRepository(), new ExpoFileStorage(), progress, parsePDF);
   } finally {
     // Only the picker's temporary copy is removed; the user-selected original is untouched.
     try { if (Platform.OS !== 'android' && cached?.exists && cached.uri.startsWith(Paths.cache.uri.replace(/\/$/, '') + '/')) cached.delete(); } catch { /* Cache can be reclaimed by the OS. */ }

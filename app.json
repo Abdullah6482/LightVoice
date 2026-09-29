@@ -11,6 +11,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.abdullah.lightvoice",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -30,6 +31,13 @@
       "expo-router",
       "expo-status-bar",
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "09f72c37-5fbf-41a0-a109-16599a48ba43"
+      }
+    },
+    "owner": "abdullahaa6482"
   }
 }

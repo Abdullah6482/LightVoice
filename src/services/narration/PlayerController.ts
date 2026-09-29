@@ -11,6 +11,7 @@ export interface PlayerState {
   settings: AppSettings; sleep: number | 'chapter' | null;
 }
 export class PlayerController {
+  readonly supportsBackground = false;
   private state: PlayerState = { mode: 'idle', ready: false, chapters: [], offset: 0, length: 0, excerpt: '', settings: { playbackRate: 1, continueToNextChapter: true }, sleep: null };
   private text = '';
   private listeners = new Set<() => void>();
@@ -44,7 +45,8 @@ export class PlayerController {
       this.publish({ settings: await this.settings.load() });
       const saved = await this.progress.latest();
       if (saved) await this.load(saved.bookId, saved.chapterId, saved.textOffset, false);
-    } finally { this.publish({ ready: true }); }
+      this.publish({ ready: true, error: undefined });
+    } catch (error) { this.publish({ ready: false }); throw error; }
   });
   private async save() {
     const { book, chapter, offset, settings } = this.state;
@@ -89,6 +91,19 @@ export class PlayerController {
     if (this.state.chapter && this.state.mode !== 'ended') this.publish({ mode: 'paused' });
     await this.save();
   });
+  preparePreview = () => this.pause();
+  async forgetBook(bookId: string) {
+    // Unlike UI commands, deletion must propagate errors to the caller.
+    const action = this.queue.then(async () => {
+      if (this.state.book?.id !== bookId) return;
+      await this.silence();
+      if (this.timer) clearTimeout(this.timer);
+      this.timer = undefined; this.text = '';
+      this.publish({ book: undefined, chapter: undefined, chapters: [], offset: 0, length: 0, excerpt: '', sleep: null, mode: 'idle', error: undefined });
+    });
+    this.queue = action.catch(() => {});
+    return action;
+  }
   setForeground(active: boolean) {
     this.foreground = active;
     if (!active) return this.pause();
@@ -116,7 +131,7 @@ export class PlayerController {
     const next = { ...this.state.settings, ...patch };
     if (!playbackRates.includes(next.playbackRate)) throw new Error('Unsupported playback speed.');
     await this.settings.save(next);
-    const restart = this.state.mode === 'playing' && next.playbackRate !== this.state.settings.playbackRate;
+    const restart = this.state.mode === 'playing' && (next.playbackRate !== this.state.settings.playbackRate || next.voiceId !== this.state.settings.voiceId);
     if (restart) await this.silence();
     this.publish({ settings: next });
     await this.save();
@@ -171,6 +186,6 @@ export class PlayerController {
         ++this.epoch; this.publish({ mode: 'paused' }); await this.save();
       }); },
       onError: (error) => { void this.command(async () => { if (token === this.epoch) { await this.save(); throw error; } }); },
-    });
+    }, this.state.settings.voiceId);
   }
 }

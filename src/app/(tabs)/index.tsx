@@ -25,7 +25,7 @@ export default function LibraryScreen() {
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
   const startImport = async () => {
     if (busy) return;
-    setBusy(true); setStatus('Choose an EPUB…');
+    setBusy(true); setStatus('Choose an EPUB or PDF…');
     try {
       const result = await pickAndImport(setStatus);
       if (result) {
@@ -41,7 +41,7 @@ export default function LibraryScreen() {
   return <Screen>
     <Text style={s.eyebrow}>YOUR AUDIOBOOKS</Text>
     <View style={s.header}><Text style={s.title}>LightVoice</Text>
-      <Pressable accessibilityRole="button" disabled={busy} onPress={() => void startImport()} style={s.button}><Text style={s.back}>{busy ? 'Importing…' : '+ Import EPUB'}</Text></Pressable>
+      <Pressable accessibilityRole="button" disabled={busy} onPress={() => void startImport()} style={s.button}><Text style={s.back}>{busy ? 'Importing…' : '+ Import book'}</Text></Pressable>
     </View>
     {busy && <View accessibilityLiveRegion="polite" style={s.header}><ActivityIndicator color={colors.primary} /><Text style={s.muted}>{status}</Text></View>}
     {!!error && <Pressable onPress={() => void refresh()}><Text style={s.error}>{error} Retry</Text></Pressable>}
@@ -52,9 +52,9 @@ export default function LibraryScreen() {
     {loading ? <ActivityIndicator color={colors.primary} /> : <FlatList data={books} keyExtractor={(book) => book.id}
       renderItem={({ item }) => <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/book/[id]', params: { id: item.id } })} style={s.book}>
         {item.coverPath ? <Image source={{ uri: item.coverPath }} style={s.cover} /> : <View style={[s.cover, s.placeholder]}><Text style={s.back}>LV</Text></View>}
-        <View style={s.copy}><Text style={s.bookTitle}>{item.title}</Text><Text style={s.muted}>{item.author || 'Unknown author'}</Text><Text style={s.eyebrow}>EPUB · ON THIS DEVICE</Text></View>
+        <View style={s.copy}><Text style={s.bookTitle}>{item.title}</Text><Text style={s.muted}>{item.author || 'Unknown author'}</Text><Text style={s.eyebrow}>{item.format.toUpperCase()} · ON THIS DEVICE</Text></View>
       </Pressable>}
-      ListEmptyComponent={<View style={s.empty}><Text style={s.bookTitle}>Your next story starts here</Text><Text style={s.muted}>Import an EPUB to add its cover and chapters to your library.</Text></View>}
+      ListEmptyComponent={<View style={s.empty}><Text style={s.bookTitle}>Your next story starts here</Text><Text style={s.muted}>Import an EPUB or a text-based PDF to start reading and listening.</Text></View>}
     />}
   </Screen>;
 }

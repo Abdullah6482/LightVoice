@@ -43,6 +43,20 @@ test('missing metadata and cover still imports with useful fallbacks', async () 
   assert.equal(book.cover, undefined);
   assert.equal(book.warnings.length, 2);
 });
+test('EPUB contents labels preserve publisher chapter numbers despite front matter', async () => {
+  const zip = await JSZip.loadAsync(await fixture());
+  zip.file('OPS/nav.xhtml', '<html><body><nav epub:type="toc"><a href="Text/two%20chapter.xhtml">Prologue</a><a href="Text/one.xhtml#start">Chapter 1: A Beginning</a></nav></body></html>');
+  const book = await parseEPUB(await zip.generateAsync({ type: 'uint8array' }), 'Fallback');
+  assert.deepEqual(book.chapters.map(chapter => chapter.title), ['Prologue', 'Chapter 1: A Beginning']);
+});
+test('EPUB 2 nested NCX labels are read in spine order', async () => {
+  const zip = await JSZip.loadAsync(await fixture());
+  const opf = (await zip.file('OPS/book.opf').async('string')).replace('<manifest>', '<manifest><item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>');
+  zip.file('OPS/book.opf', opf);
+  zip.file('OPS/toc.ncx', '<ncx><navMap><navPoint><navLabel><text>Prologue</text></navLabel><content src="Text/two%20chapter.xhtml"/><navPoint><navLabel><text>Chapter I</text></navLabel><content src="Text/one.xhtml"/></navPoint></navPoint></navMap></ncx>');
+  const book = await parseEPUB(await zip.generateAsync({ type: 'uint8array' }), 'Fallback');
+  assert.deepEqual(book.chapters.map(chapter => chapter.title), ['Prologue', 'Chapter I']);
+});
 test('corrupt archive and missing required chapter fail explicitly', async () => {
   await assert.rejects(parseEPUB(new Uint8Array([1, 2, 3]), 'Bad'), /readable EPUB/);
   await assert.rejects(parseEPUB(await fixture({ invalidSpine: true }), 'Bad'), /missing chapter/);
@@ -77,6 +91,17 @@ test('duplicate returns the existing book without touching files', async () => {
   const existing = { id: 'hash', title: 'Existing' }; const d = dependencies({ existing });
   const result = await importBook(new Uint8Array(), 'same.epub', 'hash', d.repo, d.storage);
   assert.equal(result.book, existing); assert.equal(result.duplicate, true); assert.equal(d.removals, 0);
+});
+
+test('PDF import persists the source, chapters and coverage report together', async () => {
+  const d = dependencies();
+  const pdfReport = {version:2,mode:'chapters',pageCount:3,sections:[],imagePages:[1],warnings:['OCR needed']};
+  const parsed = {title:'PDF',chapters:[{title:'Chapter 1',text:'Story.',wordCount:1}],warnings:pdfReport.warnings,pdfReport};
+  const result = await importBook(new Uint8Array([1]), 'book.pdf', 'hash', d.repo, d.storage, undefined, async()=>parsed);
+  assert.equal(result.book.format,'pdf');
+  assert.equal(result.book.sourcePath,'hash/source.pdf');
+  assert.deepEqual(JSON.parse(d.files.get('hash/pdf-report.json')),pdfReport);
+  assert.equal(d.files.get('hash/0.txt'),'Story.');
 });
 test('file or database failures clean up imported files', async () => {
   for (const failure of [{ failSave: true }, { failWrite: true }]) {

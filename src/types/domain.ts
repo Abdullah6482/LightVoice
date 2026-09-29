@@ -33,4 +33,7 @@ export interface PlaybackProgress {
 export interface AppSettings {
   playbackRate: number;
   continueToNextChapter: boolean;
+  voiceId?: string;
+  readerFontSize?: number;
+  librarySort?: 'newest' | 'title' | 'author';
 }

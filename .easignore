@@ -1,0 +1,25 @@
+# Keep local books, generated outputs and development caches off the cloud builder.
+node_modules/
+.git/
+.expo/
+dist/
+tmp/
+output/
+*.pdf
+*.epub
+*.log
+.env*
+.codex/
+.agents/
+*.jks
+*.keystore
+*.pem
+*.key
+*.p8
+*.p12
+*.mobileprovision
+credentials.json
+/android/
+/ios/
+# Rebuilt by postinstall; native module source under modules/ must be uploaded.
+src/services/pdf/runtime.generated.ts

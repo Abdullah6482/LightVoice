@@ -27,6 +27,7 @@ export default function PlayerScreen() {
       <Text style={styles.subtitle}>{state.chapter?.title ?? 'Open a book in your Library and tap Listen.'}</Text>
       {busy && <ActivityIndicator color={colors.primary} />}
       {!!state.error && <Text accessibilityLiveRegion="polite" style={styles.error}>{state.error}</Text>}
+      {!state.ready && !!state.error && <Control label="Retry loading player" onPress={() => { void player.initialize(); }} />}
       {state.chapter ? <>
         <Slider accessibilityLabel="Chapter progress" minimumValue={0} maximumValue={100} value={scrub ?? percent}
           disabled={busy} minimumTrackTintColor={colors.primary} maximumTrackTintColor={colors.border} thumbTintColor={colors.primary}
@@ -49,7 +50,9 @@ export default function PlayerScreen() {
           <Control label="Read chapter" onPress={() => router.push({ pathname: '/chapter/[id]', params: { id: state.chapter!.id, bookId: state.book!.id } })} />
           <Control label="Restart chapter" disabled={busy} onPress={() => { void player.seek(0); }} />
         </View>
-        <Text style={styles.note}>Keep LightVoice open to listen. Leaving the app pauses narration and saves your place. Resume may repeat the current word or a short passage, depending on your device voice.</Text>
+        <Text style={styles.note}>{player.supportsBackground
+          ? 'Android background narration is enabled. Use the notification or lock-screen controls while the screen is off. Calls and disconnected headphones pause playback; tap Play to resume. Force-stopping the app stops narration. Resume may repeat the current word or short passage.'
+          : 'Foreground narration: keep LightVoice open to listen. Install the Android development build for screen-off playback and notification controls. Resume may repeat the current word or short passage.'}</Text>
       </> : <Control label="Open Library" onPress={() => router.navigate('/')} />}
     </Screen>
     <Modal visible={menu !== null} animationType="slide" onRequestClose={() => setMenu(null)}>
@@ -62,7 +65,7 @@ export default function PlayerScreen() {
           {timers.map(minutes => <Control key={minutes} label={`${minutes} minutes`} onPress={() => { void player.setSleep(minutes); setMenu(null); }} />)}
           <Control label="End of chapter" active={state.sleep === 'chapter'} onPress={() => { void player.setSleep('chapter'); setMenu(null); }} />
         </View>}
-        {menu === 'chapters' && <FlatList data={state.chapters} keyExtractor={chapter => chapter.id} renderItem={({ item }) => <Control label={`${item.index + 1}. ${item.title}`} active={item.id === state.chapter?.id} onPress={() => { if (state.book) void player.select(state.book.id, item.id); setMenu(null); }} />} />}
+        {menu === 'chapters' && <FlatList data={state.chapters} keyExtractor={chapter => chapter.id} renderItem={({ item }) => <Control label={item.title} active={item.id === state.chapter?.id} onPress={() => { if (state.book) void player.select(state.book.id, item.id); setMenu(null); }} />} />}
       </Screen>
     </Modal>
   </>;

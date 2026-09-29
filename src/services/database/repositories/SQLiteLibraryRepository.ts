@@ -14,6 +14,27 @@ export interface LibraryRepository {
 }
 
 export class SQLiteLibraryRepository implements LibraryRepository {
+  async remove(id: string) {
+    if (!/^[a-zA-Z0-9-]+$/.test(id)) throw new Error('Invalid book ID.');
+    await (await getDatabase()).withExclusiveTransactionAsync(async tx => {
+      await tx.runAsync('INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)', `delete-book:${id}`, id);
+      await tx.runAsync('DELETE FROM books WHERE id = ?', id);
+    });
+  }
+  async pendingFileDeletions() {
+    return (await getDatabase()).getAllAsync<{ value: string }>("SELECT value FROM settings WHERE key LIKE 'delete-book:%'");
+  }
+  async finishFileDeletion(id: string) {
+    await (await getDatabase()).runAsync('DELETE FROM settings WHERE key = ?', `delete-book:${id}`);
+  }
+  async updateChapterTitles(bookId: string, titles: string[]) {
+    const db = await getDatabase();
+    await db.withExclusiveTransactionAsync(async (tx) => {
+      const rows = await tx.getAllAsync<{ id: string }>('SELECT id FROM chapters WHERE book_id = ? ORDER BY chapter_index', bookId);
+      if (rows.length !== titles.length) throw new Error('Chapter structure differs. Titles were not changed.');
+      for (let i = 0; i < rows.length; i++) await tx.runAsync('UPDATE chapters SET title = ? WHERE id = ?', titles[i], rows[i].id);
+    });
+  }
   async findAll(): Promise<Book[]> {
     return (await getDatabase()).getAllAsync<Book>(`SELECT ${bookColumns} FROM books ORDER BY created_at DESC, id`);
   }
